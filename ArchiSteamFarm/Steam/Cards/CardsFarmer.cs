@@ -890,7 +890,7 @@ public sealed class CardsFarmer : IAsyncDisposable, IDisposable {
 			Bot.ArchiLogger.LogGenericWarning(Strings.FormatWarningIdlingGameMismatch(game.AppID, game.GameName, game.PlayableAppID));
 		}
 
-		await Bot.IdleGame(game).ConfigureAwait(false);
+		Bot.ArchiHandler.PlayGames(new HashSet<uint>(1) { game.PlayableAppID });
 
 		bool keepFarming = true;
 		DateTime endFarmingDate = DateTime.UtcNow.AddHours(ASF.GlobalConfig?.MaxFarmingTime ?? GlobalConfig.DefaultMaxFarmingTime);
@@ -949,7 +949,7 @@ public sealed class CardsFarmer : IAsyncDisposable, IDisposable {
 			return true;
 		}
 
-		await Bot.IdleGames(games).ConfigureAwait(false);
+		Bot.ArchiHandler.PlayGames(games.Select(static game => game.PlayableAppID).ToHashSet());
 
 		bool keepFarming = true;
 

@@ -949,8 +949,12 @@ public sealed class ArchiHandler : ClientMsgHandler, IDisposable {
 		return response.Result == EResult.OK ? response.Body.device_identifier : null;
 	}
 
-	internal async Task PlayGames(IReadOnlyCollection<uint> gameIDs, string? gameName = null) {
+	internal void PlayGames(IReadOnlyCollection<uint> gameIDs) {
 		ArgumentNullException.ThrowIfNull(gameIDs);
+
+		if (gameIDs.Count > MaxGamesPlayedConcurrently) {
+			throw new InvalidOperationException(nameof(gameIDs));
+		}
 
 		if (Client == null) {
 			throw new InvalidOperationException(nameof(Client));
@@ -967,39 +971,10 @@ public sealed class ArchiHandler : ClientMsgHandler, IDisposable {
 			}
 		};
 
-		if (!string.IsNullOrEmpty(gameName)) {
-			// If we have custom name to display, we must workaround the Steam network broken behaviour and send request on clean non-playing session
-			// This ensures that custom name will in fact display properly (if it's not omitted due to MaxGamesPlayedConcurrently, that is)
-			Client.Send(request);
-
-			await Task.Delay(Bot.CallbackSleep).ConfigureAwait(false);
-
-			request.Body.games_played.Add(
-				new CMsgClientGamesPlayed.GamePlayed {
-					game_extra_info = gameName,
-					game_id = new GameID {
-						AppType = GameID.GameType.Shortcut,
-						ModID = uint.MaxValue
-					}
-				}
-			);
-		}
-
 		if (gameIDs.Count > 0) {
-			IEnumerable<uint> uniqueGameIDs = gameIDs as IReadOnlySet<uint> ?? gameIDs.Distinct();
+			IEnumerable<uint> uniqueGameIDs = gameIDs is IReadOnlySet<uint> or ISet<uint> ? gameIDs : gameIDs.Distinct();
 
 			foreach (uint gameID in uniqueGameIDs.Where(static gameID => gameID > 0)) {
-				if (request.Body.games_played.Count >= MaxGamesPlayedConcurrently) {
-					if (string.IsNullOrEmpty(gameName)) {
-						throw new ArgumentOutOfRangeException(nameof(gameIDs));
-					}
-
-					// Make extra space by ditching custom gameName
-					gameName = null;
-
-					request.Body.games_played.RemoveAt(0);
-				}
-
 				request.Body.games_played.Add(new CMsgClientGamesPlayed.GamePlayed { game_id = new GameID(gameID) });
 			}
 		}

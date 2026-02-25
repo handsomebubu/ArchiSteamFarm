@@ -2316,7 +2316,7 @@ public sealed class Commands {
 		return responses.Count > 0 ? string.Join(Environment.NewLine, responses) : null;
 	}
 
-	private async Task<string?> ResponsePlay(EAccess access, HashSet<uint> gameIDs, string? gameName = null) {
+	private async Task<string?> ResponsePlay(EAccess access, HashSet<uint> gameIDs) {
 		if (!Enum.IsDefined(access)) {
 			throw new InvalidEnumArgumentException(nameof(access), (int) access, typeof(EAccess));
 		}
@@ -2335,7 +2335,7 @@ public sealed class Commands {
 			return FormatBotResponse(Strings.BotNotConnected);
 		}
 
-		(bool success, string message) = await Bot.Actions.Play(gameIDs, gameName).ConfigureAwait(false);
+		(bool success, string message) = await Bot.Actions.Play(gameIDs).ConfigureAwait(false);
 
 		return FormatBotResponse(success ? message : Strings.FormatWarningFailedWithError(message));
 	}
@@ -2357,32 +2357,24 @@ public sealed class Commands {
 
 		string[] games = targetGameIDs.Split(SharedInfo.ListElementSeparators, StringSplitOptions.RemoveEmptyEntries);
 
-		if (games.Length == 0) {
-			return FormatBotResponse(Strings.FormatErrorIsEmpty(nameof(games)));
+		switch (games.Length) {
+			case 0:
+				return FormatBotResponse(Strings.FormatErrorIsEmpty(nameof(games)));
+			case > ArchiHandler.MaxGamesPlayedConcurrently:
+				return FormatBotResponse(Strings.FormatWarningFailedWithError($"{nameof(games)} > {ArchiHandler.MaxGamesPlayedConcurrently}"));
 		}
 
-		HashSet<uint> gamesToPlay = new(Math.Min(games.Length, ArchiHandler.MaxGamesPlayedConcurrently));
-		StringBuilder gameName = new();
+		HashSet<uint> gamesToPlay = new(games.Length);
 
 		foreach (string game in games) {
 			if (!uint.TryParse(game, out uint gameID) || (gameID == 0)) {
-				if (gameName.Length > 0) {
-					gameName.Append(' ');
-				}
-
-				gameName.Append(game);
-
-				continue;
-			}
-
-			if (gamesToPlay.Count >= ArchiHandler.MaxGamesPlayedConcurrently) {
-				return FormatBotResponse(Strings.FormatWarningFailedWithError($"{nameof(gamesToPlay)} > {ArchiHandler.MaxGamesPlayedConcurrently}"));
+				return FormatBotResponse(Strings.FormatErrorIsInvalid(nameof(game)));
 			}
 
 			gamesToPlay.Add(gameID);
 		}
 
-		return await ResponsePlay(access, gamesToPlay, gameName.Length > 0 ? gameName.ToString() : null).ConfigureAwait(false);
+		return await ResponsePlay(access, gamesToPlay).ConfigureAwait(false);
 	}
 
 	private static async Task<string?> ResponsePlay(EAccess access, string botNames, string targetGameIDs, ulong steamID = 0) {

@@ -307,7 +307,7 @@ public sealed class Actions : IAsyncDisposable, IDisposable {
 			// Despite of proper order on our end, Steam network might not respect it
 			await Task.Delay(Bot.CallbackSleep).ConfigureAwait(false);
 
-			await Bot.ArchiHandler.PlayGames([], Bot.BotConfig.CustomGamePlayedWhileIdle).ConfigureAwait(false);
+			Bot.ArchiHandler.PlayGames([]);
 		}
 
 		if (resumeInSeconds > 0) {
@@ -327,7 +327,7 @@ public sealed class Actions : IAsyncDisposable, IDisposable {
 	}
 
 	[PublicAPI]
-	public async Task<(bool Success, string Message)> Play(IReadOnlyCollection<uint> gameIDs, string? gameName = null) {
+	public async Task<(bool Success, string Message)> Play(IReadOnlyCollection<uint> gameIDs) {
 		ArgumentNullException.ThrowIfNull(gameIDs);
 
 		if (!Bot.IsConnectedAndLoggedOn) {
@@ -338,7 +338,7 @@ public sealed class Actions : IAsyncDisposable, IDisposable {
 			await Bot.CardsFarmer.Pause(true).ConfigureAwait(false);
 		}
 
-		await Bot.ArchiHandler.PlayGames(gameIDs, gameName).ConfigureAwait(false);
+		Bot.ArchiHandler.PlayGames(gameIDs);
 
 		return (true, gameIDs.Count > 0 ? Strings.FormatBotIdlingSelectedGames(nameof(gameIDs), string.Join(", ", gameIDs)) : Strings.Done);
 	}
