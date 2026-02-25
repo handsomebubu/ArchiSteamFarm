@@ -54,11 +54,9 @@ public sealed class BotConfig {
 	[PublicAPI]
 	public const EBotBehaviour DefaultBotBehaviour = EBotBehaviour.None;
 
-	[Obsolete("Functionality deprecated, will be removed in the next version")]
 	[PublicAPI]
 	public const string? DefaultCustomGamePlayedWhileFarming = null;
 
-	[Obsolete("Functionality deprecated, will be removed in the next version")]
 	[PublicAPI]
 	public const string? DefaultCustomGamePlayedWhileIdle = null;
 
@@ -209,11 +207,9 @@ public sealed class BotConfig {
 	public ImmutableHashSet<EAssetType> CompleteTypesToSend { get; init; } = DefaultCompleteTypesToSend;
 
 	[JsonInclude]
-	[Obsolete("Functionality deprecated, will be removed in the next version")]
 	public string? CustomGamePlayedWhileFarming { get; init; } = DefaultCustomGamePlayedWhileFarming;
 
 	[JsonInclude]
-	[Obsolete("Functionality deprecated, will be removed in the next version")]
 	public string? CustomGamePlayedWhileIdle { get; init; } = DefaultCustomGamePlayedWhileIdle;
 
 	[JsonInclude]
@@ -392,15 +388,11 @@ public sealed class BotConfig {
 	[UsedImplicitly]
 	public bool ShouldSerializeCompleteTypesToSend() => !Saving || ((CompleteTypesToSend != DefaultCompleteTypesToSend) && !CompleteTypesToSend.SetEquals(DefaultCompleteTypesToSend));
 
-#pragma warning disable CA1822
-	[Obsolete("Functionality deprecated, will be removed in the next version")]
 	[UsedImplicitly]
-	public bool ShouldSerializeCustomGamePlayedWhileFarming() => false;
+	public bool ShouldSerializeCustomGamePlayedWhileFarming() => !Saving || (CustomGamePlayedWhileFarming != DefaultCustomGamePlayedWhileFarming);
 
-	[Obsolete("Functionality deprecated, will be removed in the next version")]
 	[UsedImplicitly]
-	public bool ShouldSerializeCustomGamePlayedWhileIdle() => false;
-#pragma warning restore CA1822
+	public bool ShouldSerializeCustomGamePlayedWhileIdle() => !Saving || (CustomGamePlayedWhileIdle != DefaultCustomGamePlayedWhileIdle);
 
 	[UsedImplicitly]
 	public bool ShouldSerializeEnabled() => !Saving || (Enabled != DefaultEnabled);
@@ -526,6 +518,15 @@ public sealed class BotConfig {
 
 			if (!completeTypesToSendValidTypes.Contains(completableType)) {
 				return (false, Strings.FormatErrorConfigPropertyInvalid(nameof(CompleteTypesToSend), completableType));
+			}
+		}
+
+		if (!string.IsNullOrEmpty(CustomGamePlayedWhileFarming)) {
+			try {
+				// Test CustomGamePlayedWhileFarming against supported format, otherwise we'll throw later when used
+				string _ = string.Format(CultureInfo.CurrentCulture, CustomGamePlayedWhileFarming, null, null);
+			} catch (FormatException e) {
+				return (false, Strings.FormatErrorConfigPropertyInvalid(nameof(CustomGamePlayedWhileFarming), e.Message));
 			}
 		}
 

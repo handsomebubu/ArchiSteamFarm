@@ -1429,6 +1429,32 @@ public sealed class Bot : IAsyncDisposable, IDisposable {
 		return ((ECommunityPrivacy) privacySettings.privacy_state == ECommunityPrivacy.Public) && ((ECommunityPrivacy) privacySettings.privacy_state_inventory == ECommunityPrivacy.Public);
 	}
 
+	internal async Task IdleGame(Game game) {
+		ArgumentNullException.ThrowIfNull(game);
+
+		string? gameName = null;
+
+		if (!string.IsNullOrEmpty(BotConfig.CustomGamePlayedWhileFarming)) {
+			gameName = string.Format(CultureInfo.CurrentCulture, BotConfig.CustomGamePlayedWhileFarming, game.AppID, game.GameName);
+		}
+
+		await ArchiHandler.PlayGames(new HashSet<uint>(1) { game.PlayableAppID }, gameName).ConfigureAwait(false);
+	}
+
+	internal async Task IdleGames(IReadOnlyCollection<Game> games) {
+		if ((games == null) || (games.Count == 0)) {
+			throw new ArgumentNullException(nameof(games));
+		}
+
+		string? gameName = null;
+
+		if (!string.IsNullOrEmpty(BotConfig.CustomGamePlayedWhileFarming)) {
+			gameName = string.Format(CultureInfo.CurrentCulture, BotConfig.CustomGamePlayedWhileFarming, string.Join(", ", games.Select(static game => game.AppID)), string.Join(", ", games.Select(static game => game.GameName)));
+		}
+
+		await ArchiHandler.PlayGames(games.Select(static game => game.PlayableAppID).ToHashSet(), gameName).ConfigureAwait(false);
+	}
+
 	internal async Task ImportKeysToRedeem(string filePath) {
 		ArgumentException.ThrowIfNullOrEmpty(filePath);
 
@@ -3832,7 +3858,7 @@ public sealed class Bot : IAsyncDisposable, IDisposable {
 			ArchiLogger.LogGenericInfo(Strings.FormatBotIdlingSelectedGames(nameof(BotConfig.GamesPlayedWhileIdle), string.Join(", ", BotConfig.GamesPlayedWhileIdle)));
 		}
 
-		ArchiHandler.PlayGames(BotConfig.GamesPlayedWhileIdle);
+		await ArchiHandler.PlayGames(BotConfig.GamesPlayedWhileIdle, BotConfig.CustomGamePlayedWhileIdle).ConfigureAwait(false);
 	}
 
 	private void ResetPlayingWasBlockedWithTimer(object? state = null) {
